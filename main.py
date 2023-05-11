@@ -77,7 +77,7 @@ class MyView(discord.ui.View):
             "title": self.title,
             "due": (self.due + epoch_key[select.values[0]] * 1000) if select.values[0] == "Tomorrow" else (time.time() * 1000 + epoch_key[select.values[0]] * 1000),
             "method": "discord",
-            "assessment": self.assessment
+            "assessment": None if self.assessment is None else int(self.assessment)
         }
 
         headers = {
