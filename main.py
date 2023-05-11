@@ -1,4 +1,5 @@
 import os
+import time
 
 import discord
 from discord.ui import Item
@@ -74,7 +75,7 @@ class MyView(discord.ui.View):
 
         json = {
             "title": self.title,
-            "due": self.due + epoch_key[select.values[0]] * 1000,
+            "due": (self.due + epoch_key[select.values[0]] * 1000) if select.values[0] == "Tomorrow" else (time.time() * 1000 + epoch_key[select.values[0]] * 1000),
             "method": "discord",
             "assessment": self.assessment
         }
