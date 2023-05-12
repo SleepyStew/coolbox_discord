@@ -15,8 +15,8 @@ bot = discord.Client()
 
 
 @app.get("/")
-async def root(token: str, id: int, name: str, title: str, due: int, assessment: str = None):
-    response = await send_message(token, id, name, title, assessment, due)
+async def root(user: str, id: int, name: str, title: str, due: int, assessment: str = None):
+    response = await send_message(user, id, name, title, assessment, due)
     return response
 
 
@@ -31,9 +31,9 @@ epoch_key = {
 
 
 class MyView(discord.ui.View):
-    def __init__(self, token, title, assessment, due, *items: Item):
+    def __init__(self, user, title, assessment, due, *items: Item):
         super().__init__(*items)
-        self.token = token
+        self.user = user
         self.title = title
         self.assessment = assessment
         self.due = due
@@ -69,22 +69,28 @@ class MyView(discord.ui.View):
             ),
         ]
     )
-    async def select_callback(self, select, interaction):  # the function called when the user is done selecting options
+    async def select_callback(self, select, interaction):  # the function called when the discord_user is done selecting options
         select.disabled = True
         await self.message.edit(view=self)
 
         json = {
             "title": self.title,
-            "due": (self.due + epoch_key[select.values[0]] * 1000) if select.values[0] == "Tomorrow" else (time.time() * 1000 + epoch_key[select.values[0]] * 1000),
+            "due": int((self.due + epoch_key[select.values[0]] * 1000) if select.values[0] == "Tomorrow" else (time.time() * 1000 + epoch_key[select.values[0]] * 1000)),
             "method": "discord",
-            "assessment": None if self.assessment is None else int(self.assessment)
+            "assessment": None if self.assessment is None else int(self.assessment),
+            "user": self.user
         }
+
+        print(json)
 
         headers = {
-            "authorization": "Bearer " + self.token
+            "authorization": "Bearer " + os.environ.get("PERMANENT_TOKEN")
         }
 
-        response = requests.post("https://api.coolbox.lol/reminders", json=json, headers=headers)
+        response = requests.post(os.environ.get("SERVER_URL") + "reminders/reschedule", json=json, headers=headers)
+
+        print(response)
+        print(response.json())
 
         if response.status_code == 200:
             if select.values[0] == "Tomorrow":
@@ -95,18 +101,18 @@ class MyView(discord.ui.View):
             await interaction.response.send_message(f"Somethings not working right now, if this continues please report this to <@566951727182381057>.")
 
 
-async def send_message(token, id, name, title, assessment, due):
-    user = await bot.fetch_user(id)
-    if user is None:
+async def send_message(user, id, name, title, assessment, due):
+    discord_user = await bot.fetch_user(id)
+    if discord_user is None:
         return {"status": "error"}
-    # get user by username and tag
+    # get discord_user by username and tag
 
     title = title.replace('\\n', '\n')
     try:
         embed = discord.Embed(title="CoolBox Reminder", url="https://schoolbox.donvale.vic.edu.au/", description=f"Hey {name} :wave: You have a reminder.",
                               colour=discord.Colour.from_rgb(88, 101, 242))
         embed.add_field(name="Reminder", value=title, inline=True)
-        await user.send(embed=embed, view=MyView(token, title, assessment, due))
+        await discord_user.send(embed=embed, view=MyView(user, title, assessment, due))
         return {"status": "success"}
     except:
         return {"status": "error"}
