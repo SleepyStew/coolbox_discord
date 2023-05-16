@@ -32,7 +32,7 @@ epoch_key = {
 
 class MyView(discord.ui.View):
     def __init__(self, user, title, assessment, due, *items: Item):
-        super().__init__(*items)
+        super().__init__(*items, timeout=None)
         self.user = user
         self.title = title
         self.assessment = assessment
