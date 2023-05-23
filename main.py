@@ -32,11 +32,16 @@ epoch_key = {
 
 class MyView(discord.ui.View):
     def __init__(self, user, title, assessment, due, *items: Item):
-        super().__init__(*items, timeout=None)
+        super().__init__(*items, timeout=86400)
         self.user = user
         self.title = title
         self.assessment = assessment
         self.due = due
+
+    async def on_timeout(self):
+        for child in self.children:
+            child.disabled = True
+        await self.message.edit(view=self)
 
     @discord.ui.select(  # the decorator that lets you specify the properties of the select menu
         placeholder="Remind me in...",  # the placeholder text that will be displayed if nothing is selected
