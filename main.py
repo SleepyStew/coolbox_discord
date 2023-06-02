@@ -11,7 +11,8 @@ import requests
 dotenv.load_dotenv()
 
 app = FastAPI()
-bot = discord.Client()
+intents = discord.Intents.all()
+bot = discord.Client(intents=intents)
 
 
 @app.get("/")
@@ -121,6 +122,50 @@ async def send_message(user, id, name, title, assessment, due):
         return {"status": "success"}
     except:
         return {"status": "error"}
+
+
+async def get_all_users():
+    guild = bot.get_guild(999205764117835796)
+    members = await guild.fetch_members(limit=None).flatten()
+    return members
+
+
+@app.get("/update_roles")
+async def update_roles():
+
+    headers = {
+        "authorization": "Bearer " + os.environ.get("PERMANENT_TOKEN")
+    }
+
+    response = requests.get(os.environ.get("SERVER_URL") + "discord/users", headers=headers)
+
+    valid_users = []
+
+    if response.status_code == 200:
+        linked_users = response.json()
+
+        for user in linked_users:
+            valid_users.append(user["discord_id"])
+
+    all_users = await get_all_users()
+
+    role = discord.utils.get(bot.get_guild(999205764117835796).roles, name="Linked")
+
+    for user in all_users:
+        if user.id not in valid_users:
+            if role in user.roles:
+                await user.remove_roles(role)
+        else:
+            if role not in user.roles:
+                await user.add_roles(role)
+
+    return {"status": "success"}
+
+
+
+@bot.event
+async def on_ready():
+    print("Logged in as {0.user}".format(bot))
 
 
 config = Config(app=app, host="0.0.0.0", port=30022)
